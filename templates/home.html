@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Cybersecurity BaitBlocker - Home{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section id="hero" class="hero-section py-5 text-center text-white" 
+         style="background: linear-gradient(135deg, #0d6efd, #6610f2);">
+  <div class="container py-5">
+    <h1 class="display-4 fw-bold">Welcome to BaitBlocker</h1>
+    <p class="lead">Your personal cybersecurity intelligence and phishing threat tracking platform</p>
+    <a href="/register" class="btn btn-light btn-lg mt-3">🚀 Get Started</a>
+  </div>
+</section>
+
+<!-- Features Section -->
+<div class="container my-5">
+  <div class="row text-center g-4">
+    <div class="col-md-4">
+      <div class="card p-4 h-100 shadow-lg border-0 rounded-4">
+        <div class="icon-circle bg-primary text-white mb-3 mx-auto">
+          <i class="bi bi-search fs-1"></i>
+        </div>
+        <h4 class="fw-bold">Phishing Threat Lookup</h4>
+        <p class="text-muted">Search for phishing URLs, malicious emails, malware hashes, and suspicious indicators.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card p-4 h-100 shadow-lg border-0 rounded-4">
+        <div class="icon-circle bg-success text-white mb-3 mx-auto">
+          <i class="bi bi-graph-up-arrow fs-1"></i>
+        </div>
+        <h4 class="fw-bold">Threat Analytics</h4>
+        <p class="text-muted">Visualize phishing patterns, targeted domains, and time-based threat trends.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card p-4 h-100 shadow-lg border-0 rounded-4">
+        <div class="icon-circle bg-danger text-white mb-3 mx-auto">
+          <i class="bi bi-lock fs-1"></i>
+        </div>
+        <h4 class="fw-bold">Secure Account</h4>
+        <p class="text-muted">User data is encrypted, securely stored, and only accessible through your account.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mission -->
+  <div class="section-heading text-center my-5">
+    <h2 class="fw-bold">Our Mission</h2>
+    <p class="text-muted">Empowering users with real-time phishing threat intelligence and proactive defense insights.</p>
+  </div>
+
+  <!-- Why + Use Cases -->
+  <div class="row text-center g-4">
+    <div class="col-md-6">
+      <div class="card p-4 h-100 shadow-sm rounded-4">
+        <h5 class="fw-bold">Why Use BaitBlocker?</h5>
+        <ul class="text-start mt-3">
+          <li>✅ Easy-to-use interface for everyone</li>
+          <li>✅ Real-time phishing analysis powered by ML</li>
+          <li>✅ Privacy-first: we never share your data</li>
+          <li>✅ Free for students and researchers</li>
+        </ul>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card p-4 h-100 shadow-sm rounded-4">
+        <h5 class="fw-bold">Real-World Use Cases</h5>
+        <ul class="text-start mt-3">
+          <li>🛡️ Detect suspicious emails and phishing links in seconds</li>
+          <li>💡 Understand phishing attack patterns</li>
+          <li>📊 Visualize phishing threats over time</li>
+          <li>👨‍💻 Track indicators of compromise (IOCs)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="text-center mt-5">
+    <h3 class="fw-bold">Start Detecting Smarter, Safer, Faster</h3>
+    <p class="text-muted">Register now and become your own cybersecurity analyst in just minutes.</p>
+    <a class="btn btn-theme btn-lg px-4 py-2" href="/register">Get Started</a>
+  </div>
+</div>
+
+<!-- Custom CSS -->
+<style>
+  .icon-circle {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+  .card:hover {
+    transform: translateY(-5px);
+    transition: all 0.3s ease-in-out;
+  }
+</style>
+{% endblock %}

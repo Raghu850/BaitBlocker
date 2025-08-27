@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Email Sent - BaitBlocker{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+<div class="text-center">
+    <!-- Big Animated Tick with Pulse -->
+    <div class="tick-container animate__animated animate__bounceIn">
+        <svg class="pulse-tick" xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 6L9 17l-5-5"/>
+        </svg>
+    </div>
+
+    <!-- Text Message -->
+    <h2 class="text-success mt-4 animate__animated animate__fadeInDown">Email Sent!</h2>
+    <p class="animate__animated animate__fadeIn">Check your inbox for the password reset link.</p>
+
+    <!-- Back to Login Button -->
+    <a href="{{ url_for('login') }}" class="btn btn-primary mt-3 animate__animated animate__fadeInUp">Back to Login</a>
+</div>
+
+<style>
+/* Tick drawing animation */
+.tick-container svg {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: drawTick 0.8s forwards 0.5s;
+}
+
+/* Draw tick */
+@keyframes drawTick {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+/* Continuous pulse/glow */
+.pulse-tick {
+    transform-origin: center;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 0px #28a745);
+    }
+    50% {
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 15px #28a745);
+    }
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 0px #28a745);
+    }
+}
+</style>
+{% endblock %}

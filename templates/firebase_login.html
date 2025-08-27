@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}📱 Phone Login - BaitBlocker{% endblock %}
+
+{% block content %}
+<style>
+  body {
+    background: linear-gradient(to right, #00b4db, #0083b0);
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  .login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 90vh;
+  }
+
+  .login-box {
+    background: #ffffff;
+    padding: 40px 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .login-box h3 {
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 25px;
+    color: #333;
+  }
+
+  .form-control {
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 16px;
+  }
+
+  .btn {
+    border-radius: 8px;
+    padding: 10px 0;
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  .btn-primary {
+    background-color: #0077cc;
+    border-color: #0077cc;
+  }
+
+  .btn-primary:hover {
+    background-color: #005fa3;
+  }
+
+  .btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+  }
+
+  .btn-success:hover {
+    background-color: #218838;
+  }
+
+  .btn-link {
+    font-size: 14px;
+    color: #007bff;
+    text-decoration: none;
+  }
+
+  .btn-link:hover {
+    text-decoration: underline;
+  }
+
+  #resend-btn[disabled] {
+    pointer-events: none;
+    color: #aaa;
+  }
+
+  .mt-3, .mt-4 {
+    margin-top: 1rem !important;
+  }
+
+  /* Flash message style */
+  .flash-message {
+    position: fixed;
+    top: 20px;
+    right: 500px;
+    z-index: 1050;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    opacity: 0.95;
+    display: none;
+    min-width: 220px;
+  }
+
+  .flash-success { background-color: #28a745; }
+  .flash-error { background-color: #dc3545; }
+  .flash-info { background-color: #007bff; }
+</style>
+
+<div class="container login-container">
+  <div class="login-box">
+    <h3>📱 Secure Phone Login</h3>
+
+    <!-- Phone input form -->
+    <form id="phone-form">
+      <div class="mb-3">
+        <label for="phone" class="form-label">Phone Number</label>
+        <input type="text" class="form-control" id="phone" placeholder="+91XXXXXXXXXX" required>
+      </div>
+      <div id="recaptcha-container" style="display: none;"></div>
+      <button type="submit" class="btn btn-primary w-100">Send OTP</button>
+    </form>
+
+    <!-- OTP input form -->
+    <form id="otp-form" class="mt-4 d-none">
+      <div class="mb-3">
+        <label for="otp" class="form-label">Enter OTP</label>
+        <input type="text" class="form-control" id="otp" placeholder="Enter 6-digit OTP" required>
+      </div>
+      <button type="submit" class="btn btn-success w-100">Verify OTP</button>
+      <div class="text-center mt-3">
+        <button type="button" class="btn btn-link" id="resend-btn" disabled>
+          🔁 Resend OTP (<span id="countdown">30</span>s)
+        </button>
+      </div>
+    </form>
+
+    <div class="text-center mt-4">
+      <a href="{{ url_for('home') }}" class="btn-link">← Back to Home</a>
+    </div>
+  </div>
+</div>
+
+<!-- Flash message container -->
+<div id="flash-message" class="flash-message"></div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.3.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.3.0/firebase-auth-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "{{ firebase_api_key }}",
+    authDomain: "{{ firebase_auth_domain }}",
+    projectId: "{{ firebase_project_id }}",
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+
+  let recaptchaVerifier;
+  let currentPhoneNumber;
+  let recaptchaWidgetId = null;
+
+  window.onload = function () {
+    recaptchaVerifier = new firebase.auth.RecaptchaVerifier("recaptcha-container", {
+      size: "invisible"
+    });
+    recaptchaVerifier.render().then((widgetId) => {
+      recaptchaWidgetId = widgetId;
+    });
+  };
+
+  function startCountdown(seconds) {
+    const countdownEl = document.getElementById("countdown");
+    const resendBtn = document.getElementById("resend-btn");
+    resendBtn.disabled = true;
+    let timeLeft = seconds;
+
+    const interval = setInterval(() => {
+      timeLeft--;
+      countdownEl.textContent = timeLeft;
+      if (timeLeft <= 0) {
+        clearInterval(interval);
+        resendBtn.disabled = false;
+        countdownEl.textContent = "0";
+      }
+    }, 1000);
+  }
+
+  // Show flash message
+  function showFlashMessage(message, type="info", duration=3000) {
+    const flash = document.getElementById("flash-message");
+    flash.textContent = message;
+    flash.className = `flash-message flash-${type}`;
+    flash.style.display = "block";
+    setTimeout(() => { flash.style.display = "none"; }, duration);
+  }
+
+  // Send OTP
+  document.getElementById("phone-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    currentPhoneNumber = document.getElementById("phone").value.trim();
+
+    auth.signInWithPhoneNumber(currentPhoneNumber, recaptchaVerifier)
+      .then((confirmationResult) => {
+        window.confirmationResult = confirmationResult;
+        document.getElementById("otp-form").classList.remove("d-none");
+        document.getElementById("phone-form").classList.add("d-none");
+        startCountdown(30);
+
+        // Flash message for OTP sent
+        showFlashMessage("✅ OTP sent successfully!", "info");
+      }).catch((error) => {
+        showFlashMessage("❌ Error sending OTP: " + error.message, "error");
+      });
+  });
+
+  // Resend OTP
+  document.getElementById("resend-btn").addEventListener("click", function () {
+    if (!currentPhoneNumber) return;
+
+    auth.signInWithPhoneNumber(currentPhoneNumber, recaptchaVerifier)
+      .then((confirmationResult) => {
+        window.confirmationResult = confirmationResult;
+        startCountdown(30);
+        showFlashMessage("🔁 OTP resent successfully!", "info");
+      }).catch((error) => {
+        showFlashMessage("❌ Error resending OTP: " + error.message, "error");
+      });
+  });
+
+  // Verify OTP
+  document.getElementById("otp-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const code = document.getElementById("otp").value;
+
+    window.confirmationResult.confirm(code)
+      .then((result) => {
+        const user = result.user;
+        showFlashMessage("🎉 Login success! Welcome " + user.phoneNumber, "success");
+
+        // Redirect after 1.5s
+        setTimeout(() => {
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = "/firebase_login/verify";
+
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = "phone";
+          input.value = user.phoneNumber;
+
+          form.appendChild(input);
+          document.body.appendChild(form);
+          form.submit();
+        }, 1500);
+      }).catch((error) => {
+        showFlashMessage("❌ OTP verification failed: " + error.message, "error");
+      });
+  });
+</script>
+{% endblock %}

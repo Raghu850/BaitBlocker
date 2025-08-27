@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}SMS Phishing Detector{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="card floating-card p-5 mx-auto text-center" style="max-width: 750px;">
+    <h1 class="mb-4 fw-bold">📩 SMS Phishing Detector</h1>
+    <p class="text-muted mb-4">Upload an SMS screenshot and let our AI detect phishing risks in seconds.</p>
+
+    <form method="post" enctype="multipart/form-data" class="mb-4" id="smsForm">
+      <input type="file" name="image" accept="image/*" required class="form-control mb-3">
+      <button type="submit" class="btn btn-theme w-100">🔍 Analyze SMS</button>
+    </form>
+
+    {% if image_path %}
+      <img src="{{ image_path }}" alt="Uploaded SMS" class="uploaded-img">
+    {% endif %}
+
+    {% if sms_text %}
+      <div class="result text-start">
+        <h4>📝 Extracted SMS Text</h4>
+        <pre>{{ highlighted_text|safe }}</pre>
+      </div>
+    {% endif %}
+
+    {% if analysis %}
+      <div class="result text-start">
+        <h4>🔍 Analysis Result</h4>
+        <div class="badge 
+          {% if analysis.verdict == 'safe' %}badge-safe
+          {% elif analysis.verdict == 'suspicious' %}badge-suspicious
+          {% else %}badge-phishing{% endif %}">
+          {{ analysis.badge }}
+        </div>
+
+        <p><strong>Confidence:</strong> {{ analysis.confidence }}</p>
+        <p><strong>User Message:</strong> {{ analysis.user_message }}</p>
+
+        <p><strong>Reasons:</strong></p>
+        <ul>
+          {% for reason in analysis.reasons %}
+            <li>{{ reason }}</li>
+          {% endfor %}
+        </ul>
+
+        <p><strong>Risky Phrases:</strong> 
+          {% if analysis.risky_phrases %} 
+            {{ analysis.risky_phrases|join(', ') }} 
+          {% else %} 
+            None detected 
+          {% endif %}
+        </p>
+
+        <p><strong>URLs Detected:</strong></p>
+        {% if analysis.urls %}
+          <ul>
+            {% for url in analysis.urls %}
+              <li>
+                <a href="{{ url.url }}" target="_blank">{{ url.url }}</a> 
+                <span class="text-muted">({{ url.status }})</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>No URLs detected.</p>
+        {% endif %}
+
+        <p><strong>Recommendations:</strong></p>
+        <ul>
+          {% for rec in analysis.recommendations %}
+            <li>{{ rec }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+  body {
+    background: linear-gradient(135deg, #f0f4ff, #d9e6ff);
+    min-height: 100vh;
+  }
+
+  [data-bs-theme="dark"] body {
+    background: linear-gradient(135deg, #121212, #1e1e2f);
+  }
+
+  .floating-card {
+    animation: floatCard 3s ease-in-out infinite;
+    border-radius: 16px;
+    transition: background-color 0.4s ease, box-shadow 0.4s ease;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  }
+
+  [data-bs-theme="dark"] .floating-card {
+    background-color: #1e1e1e;
+    color: #fff;
+    box-shadow: 0 12px 30px rgba(255, 255, 255, 0.05);
+  }
+
+  [data-bs-theme="light"] .floating-card {
+    background-color: #ffffff;
+    color: #000;
+  }
+
+  @keyframes floatCard {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  .uploaded-img {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 12px;
+    margin: 20px 0;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease;
+  }
+
+  .uploaded-img:hover { transform: scale(1.02); }
+
+  .result {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 14px;
+    background-color: var(--result-bg, #eef0ff);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  }
+
+  [data-bs-theme="dark"] .result { background-color: #2a2a3a; }
+
+  .badge {
+    font-size: 1.1em;
+    font-weight: bold;
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    color: white;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-safe { background-color: #4caf50; }
+  .badge-suspicious { background-color: #ff9800; }
+  .badge-phishing { background-color: #f44336; }
+
+  pre {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 12px;
+    border-radius: 10px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  [data-bs-theme="dark"] pre { background: rgba(255, 255, 255, 0.05); }
+</style>
+
+<script>
+  // Clear the form and results on refresh
+  window.onload = function() {
+    if (performance.navigation.type === 1) {  // 1 = page reload
+      document.getElementById("smsForm").reset();
+    }
+  };
+</script>
+{% endblock %}

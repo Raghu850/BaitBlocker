@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - BaitBlocker{% endblock %}
+
+{% block content %}
+
+<!-- 🔒 Security Tips Dynamic Ticker -->
+<div class="security-ticker shadow-sm mb-5 py-2">
+  <div id="ticker-text" class="ticker-text">🔒Security Tip: ⚠️ Avoid clicking on suspicious links.</div>
+</div>
+
+<div class="container mt-5 text-center welcome-box">
+  <h1>
+    Welcome, {{ user.name or user.email or user.phone }}
+  </h1>
+  <p class="lead">Stay safe. Stay Secure.</p>
+</div>
+
+<!-- 🔹 Stats Section -->
+<div class="container mt-5">
+  <div class="row g-4">
+    <div class="col-md-3">
+      <div class="stat-card">
+        <h6>Total Scans</h6>
+        <div class="stat-number">{{ stats.total_scans or 0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <h6>Safe</h6>
+        <div class="stat-number text-success">{{ stats.safe or 0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <h6>Suspicious</h6>
+        <div class="stat-number text-warning">{{ stats.suspicious or 0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <h6>Phishing</h6>
+        <div class="stat-number text-danger">{{ stats.phishing or 0 }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🔹 Feature Cards Section (Clickable with Glow) -->
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <!-- URL Scanner -->
+    <div class="col-md-4 mb-4">
+      <a href="{{ url_for('url_phishing_detector') }}" class="d-block text-decoration-none">
+        <div class="glow-card h-100">
+          <div class="glow-inner d-flex flex-column align-items-center justify-content-center p-5">
+            <div class="big-emoji mb-3">🔗</div>
+            <h5 class="fw-bold mb-2">URL Scanner</h5>
+            <p class="text-muted small mb-3">Detect malicious or phishing websites instantly.</p>
+            <span class="btn-glow">Click Here</span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Email Scanner -->
+    <div class="col-md-4 mb-4">
+      <a href="{{ url_for('mail_phishing_detector') }}" class="d-block text-decoration-none">
+        <div class="glow-card h-100">
+          <div class="glow-inner d-flex flex-column align-items-center justify-content-center p-5">
+            <div class="big-emoji mb-3">📧</div>
+            <h5 class="fw-bold mb-2">Email Scanner</h5>
+            <p class="text-muted small mb-3">Identify phishing attempts in suspicious emails.</p>
+            <span class="btn-glow">Click Here</span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- SMS Scanner -->
+    <div class="col-md-4 mb-4">
+      <a href="{{ url_for('sms_phishing_detector') }}" class="d-block text-decoration-none">
+        <div class="glow-card h-100">
+          <div class="glow-inner d-flex flex-column align-items-center justify-content-center p-5">
+            <div class="big-emoji mb-3">📱</div>
+            <h5 class="fw-bold mb-2">SMS Scanner</h5>
+            <p class="text-muted small mb-3">Check mobile messages for phishing links or scams.</p>
+            <span class="btn-glow">Click Here</span>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* 🔒 Security Ticker */
+  .security-ticker {
+    position: sticky;
+    top: 56px; /* adjust for navbar */
+    z-index: 1000;
+    background: #111;
+    color: #fff;
+    font-weight: 600;
+    padding: 8px 0;
+    border-radius: 0 0 5px 5px;
+    text-align: center; /* ✅ Center align */
+  }
+
+  .ticker-text {
+    opacity: 0;
+    transition: opacity 0.8s ease-in-out;
+    white-space: nowrap;
+    font-size: 0.95rem;
+  }
+  .ticker-text.show {
+    opacity: 1;
+  }
+
+  /* Glow Feature Cards */
+  .glow-card {
+    padding: 3px;
+    border-radius: 20px;
+    background: linear-gradient(135deg,
+      #8a2be2, #00d2ff, #00ff6a, #ff6a88, #ffcc70);
+    background-size: 400% 400%;
+    transition: background-position 1s ease, transform 0.35s ease, box-shadow 0.35s ease;
+  }
+  .glow-card:hover {
+    background-position: 100% 0;
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.2),
+                0 0 20px rgba(138,43,226,0.4),
+                0 0 25px rgba(0,210,255,0.3);
+  }
+  .glow-inner {
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    border-radius: 17px;
+    height: 100%;
+    transition: background 0.3s ease;
+  }
+  .big-emoji {
+    font-size: clamp(2.5rem, 5vw, 3.8rem);
+    transition: transform 0.3s ease;
+  }
+  .glow-card:hover .big-emoji {
+    transform: scale(1.15);
+  }
+  .btn-glow {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 10px 22px;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #fff;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #8a2be2, #00d2ff, #00ff6a);
+    background-size: 200% 200%;
+    transition: all 0.4s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .btn-glow:hover {
+    background-position: right center;
+    transform: scale(1.08);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25), 0 0 12px rgba(0,210,255,0.6);
+  }
+
+  /* Stats + Welcome styling */
+  .welcome-box {
+    background: #2d2f31;
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    color: white;
+  }
+  .stat-card {
+    background: #1f2123;
+    border-radius: 14px;
+    padding: 25px;
+    color: #f1f1f1;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    text-align: center;
+  }
+  .stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #00e6ff;
+  }
+</style>
+
+<script>
+  // 🔒 Dynamic Security Tips
+  const tips = [
+    "🔒Security Tip:  📌 Always verify the sender’s email address.",
+    "🔒Security Tip:  🔑 Use strong passwords + 2FA.",
+    "🔒Security Tip:  🛡 Keep your apps & antivirus updated.",
+    "🔒Security Tip:  ⚠️ Avoid clicking on suspicious links."
+  ];
+
+  let index = 0;
+  const tickerText = document.getElementById("ticker-text");
+
+  function showNextTip() {
+    tickerText.classList.remove("show"); 
+    setTimeout(() => {
+      tickerText.innerText = tips[index];
+      tickerText.classList.add("show");
+      index = (index + 1) % tips.length;
+    }, 800);
+  }
+
+  tickerText.classList.add("show"); 
+  setInterval(showNextTip, 4000);
+</script>
+
+{% endblock %}

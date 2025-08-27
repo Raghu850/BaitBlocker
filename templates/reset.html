@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+  <h2 class="text-center">🔒 Reset Password</h2>
+  <form method="POST" class="card p-4 shadow rounded-4 mx-auto" style="max-width: 400px;">
+    <div class="mb-3">
+      <label for="password" class="form-label">New Password</label>
+      <input type="password" class="form-control" name="password" required>
+    </div>
+    <button type="submit" class="btn btn-success w-100">Update Password</button>
+  </form>
+</div>
+{% endblock %}

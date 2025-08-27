@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Phishing URL Detector{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="card floating-card p-5 mx-auto" style="max-width: 750px;">
+    <h1 class="mb-3 text-center fw-bold">🌐 Phishing URL Detector</h1>
+    <p class="text-muted text-center mb-4">
+      Enter a URL to check if it is safe, suspicious, or phishing. Our AI analyzes it in seconds.
+    </p>
+
+    <form method="post" class="mb-4" id="urlForm">
+      <input type="text" name="url" placeholder="e.g. http://example.com" required 
+             class="form-control mb-3" value="{{ url or '' }}">
+      <button type="submit" class="btn btn-theme w-100">🔍 Check URL</button>
+    </form>
+
+    {% if prediction %}
+      <!-- User Entered URL -->
+      <div class="user-url-section p-3 mb-4 rounded" style="background-color: #e0f7fa;">
+        <h5>🌐 URL Entered</h5>
+        <p class="mb-0">{{ prediction.url }}</p>
+      </div>
+
+      <!-- Prediction Result -->
+      <div class="result p-4 rounded">
+        <h4>🔍 Prediction Result</h4>
+
+        <p>
+          <strong>Verdict:</strong>
+          {% if prediction.final_verdict|lower == 'phishing' %}
+            <span class="text-danger fw-bold">❌ {{ prediction.final_verdict }}</span>
+          {% elif prediction.final_verdict|lower == 'suspicious' %}
+            <span class="text-warning fw-bold">⚠️ {{ prediction.final_verdict }}</span>
+          {% else %}
+            <span class="text-success fw-bold">✅ {{ prediction.final_verdict }}</span>
+          {% endif %}
+        </p>
+
+        {% if prediction.user_message %}
+          <p><strong>Message:</strong> {{ prediction.user_message }}</p>
+        {% endif %}
+
+        {% if prediction.friendly_reasons %}
+          <h5>Why this URL may be unsafe:</h5>
+          <ul>
+            {% for reason in prediction.friendly_reasons %}
+              <li>{{ reason }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+        {% if prediction.original_legit_domain %}
+          <h5>💡 Suggested Legit Domain:</h5>
+          <p class="mb-2"><code>{{ prediction.original_legit_domain }}</code></p>
+        {% endif %}
+
+        {% if prediction.advice %}
+          <h5>🔰 Advice:</h5>
+          <ul>
+            {% for tip in prediction.advice %}
+              <li>{{ tip }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+  body {
+    background: linear-gradient(135deg, #f0f4ff, #d9e6ff);
+    min-height: 100vh;
+  }
+  [data-bs-theme="dark"] body {
+    background: linear-gradient(135deg, #121212, #1e1e2f);
+  }
+
+  .floating-card {
+    animation: floatCard 3s ease-in-out infinite;
+    border-radius: 16px;
+    transition: background-color 0.4s ease, box-shadow 0.4s ease;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  }
+  [data-bs-theme="dark"] .floating-card {
+    background-color: #1e1e1e;
+    color: #fff;
+    box-shadow: 0 12px 30px rgba(255, 255, 255, 0.05);
+  }
+  [data-bs-theme="light"] .floating-card { background-color: #ffffff; color: #000; }
+
+  .user-url-section {
+    font-size: 1rem;
+    border-left: 5px solid #00acc1;
+  }
+
+  .result {
+    background-color: #eef0ff;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  }
+  [data-bs-theme="dark"] .result { background-color: #2a2a3a; }
+
+  .btn-theme {
+    background-color: #007bff;
+    color: #fff;
+    font-weight: bold;
+  }
+
+  .text-danger { color: #dc3545 !important; }
+  .text-success { color: #28a745 !important; }
+  .text-warning { color: #ffc107 !important; }
+
+  @keyframes floatCard {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  ul { padding-left: 20px; }
+</style>
+
+<script>
+  window.onload = function() {
+    // Reset form and hide previous results on page reload
+    if (performance.navigation.type === 1) { 
+        const urlForm = document.getElementById("urlForm");
+        if (urlForm) urlForm.reset();
+
+        const results = document.querySelectorAll(".result, .user-url-section");
+        results.forEach(result => result.style.display = "none");
+    }
+  };
+</script>
+{% endblock %}

@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}Register - BaitBlocker{% endblock %}
+
+{% block content %}
+<style>
+  .register-glass {
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    max-width: 460px;
+    padding: 2rem;
+    margin-top: 6vh;
+    width: 100%;
+    color: #000;
+    transition: background-color 0.3s, color 0.3s;
+  }
+  body.dark-mode .register-glass {
+    background-color: rgba(30, 30, 30, 0.75);
+    color: #f5f5f5;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 24px rgba(255, 255, 255, 0.05);
+  }
+
+  .form-label { font-weight: 500; }
+  .register-glass .form-control { border-radius: 50px; padding-left: 1rem; padding-right: 3rem; }
+  .register-glass .form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25);
+    border-color: #4a90e2;
+  }
+
+  .btn-theme { background-color: #4a90e2; border: none; color: white; transition: background 0.3s ease; }
+  .btn-theme:hover { background-color: #357ab7; }
+
+  /* Password eye icon */
+  .password-wrapper { position: relative; }
+  .password-wrapper .form-control { padding-right: 3rem; }
+  .toggle-password {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: gray;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .toggle-password:hover { color: #4a90e2; }
+  .toggle-password svg { width: 100%; height: 100%; }
+
+  /* Flash Toasts */
+  .flash-toast {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    color: #fff;
+    font-weight: 500;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    position: relative;
+    margin-bottom: 0.5rem;
+  }
+  .flash-toast.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
+  .flash-toast.success { background-color: #28a745; }
+  .flash-toast.danger  { background-color: #dc3545; }
+  .flash-toast.info    { background-color: #17a2b8; }
+  .flash-toast.warning { background-color: #ffc107; color: #212529; }
+  .flash-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background-color: rgba(255,255,255,0.7);
+    width: 0%;
+    border-radius: 0 0 1rem 1rem;
+    transition: width linear;
+  }
+  #flashContainer { display: flex; flex-direction: column; align-items: center; margin-bottom: 1rem; }
+
+  /* Social Buttons */
+  .alt-login hr { opacity: 0.2; }
+  .alt-login span { background-color: transparent; padding: 0 10px; position: relative; top: -13px; font-size: 0.9rem; color: gray; }
+  body.dark-mode .alt-login span { color: #bbb; }
+
+  .auth-buttons-wrapper { display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; }
+  .auth-button {
+    position: relative;
+    overflow: hidden;
+    height: 48px;
+    width: 48px;
+    padding: 0;
+    transition: width 0.4s ease, background 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    border-radius: 50px;
+    color: white;
+    font-weight: 500;
+    gap: 10px;
+    text-decoration: none;
+  }
+  .auth-button:hover { width: 180px; padding-left: 16px; }
+  .icon-container { height: 48px; width: 48px; min-width: 48px; display: flex; align-items: center; justify-content: center; }
+  .auth-icon { width: 24px; height: 24px; transition: transform 0.3s ease; }
+  .auth-button span { opacity: 0; white-space: nowrap; transition: opacity 0.3s ease, transform 0.3s ease; transform: translateX(-10px); }
+  .auth-button:hover span { opacity: 1; transform: translateX(0); }
+  .auth-button.google { background-color: #db4437; }
+  .auth-button.sms { background-color: #6c757d; }
+</style>
+
+<div class="container d-flex justify-content-center align-items-center min-vh-100">
+  <div class="register-glass">
+
+    <!-- Flash Messages Container -->
+    <div id="flashContainer">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash-toast {{ category }}">
+              {{ message }}
+              <div class="flash-progress"></div>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </div>
+
+    <!-- Close Button -->
+    <div class="text-end">
+      <a href="{{ url_for('home') }}" class="btn btn-close" aria-label="Close"></a>
+    </div>
+
+    <!-- Title -->
+    <h3 class="mb-4 text-center fw-bold">Create your <span class="text-primary">BaitBlocker</span> Account</h3>
+
+    <!-- Register Form -->
+    <form method="POST">
+      <div class="mb-3">
+        <label for="name" class="form-label">Full Name</label>
+        <input type="text" class="form-control" id="name" name="name" required>
+      </div>
+      <div class="mb-3">
+        <label for="email" class="form-label">Email address</label>
+        <input type="email" class="form-control" id="email" name="email" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="password" class="form-label">Create Password</label>
+        <div class="password-wrapper">
+          <input type="password" class="form-control" id="password" name="password" required>
+          <span class="toggle-password" onclick="togglePassword('password', 'eyeIcon1')">
+            <svg id="eyeIcon1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="confirm_password" class="form-label">Confirm Password</label>
+        <div class="password-wrapper">
+          <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+          <span class="toggle-password" onclick="togglePassword('confirm_password', 'eyeIcon2')">
+            <svg id="eyeIcon2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </span>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-theme w-100 rounded-pill">Register</button>
+      <div class="text-center mt-3">
+        <small>Already have an account? <a href="{{ url_for('login') }}">Login</a></small>
+      </div>
+    </form>
+
+    <!-- Separator -->
+    <div class="alt-login text-center my-4">
+      <hr />
+      <span>Or register using</span>
+    </div>
+
+    <!-- Google and SMS Register Buttons -->
+    <div class="auth-buttons-wrapper">
+      <a href="{{ url_for('google.login') }}" class="auth-button google">
+        <div class="icon-container">
+          <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="auth-icon">
+        </div>
+        <span>Google</span>
+      </a>
+      <a href="{{ url_for('firebase_login') }}" class="auth-button sms">
+        <div class="icon-container">
+          <img src="https://cdn-icons-png.flaticon.com/512/5971/5971861.png" alt="SMS" class="auth-icon" style="filter: invert(1);">
+        </div>
+        <span>Phone OTP</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const toasts = document.querySelectorAll(".flash-toast");
+  toasts.forEach((toast, index) => {
+    setTimeout(() => {
+      const progress = toast.querySelector(".flash-progress");
+      toast.classList.add("show");
+      let duration = 2500;
+      progress.style.transition = `width ${duration}ms linear`;
+      setTimeout(() => { progress.style.width = "100%"; }, 50);
+      setTimeout(() => { 
+        toast.classList.remove("show");
+        setTimeout(() => toast.remove(), 500);
+      }, duration);
+    }, index * 400);
+  });
+});
+
+// Toggle password visibility
+function togglePassword(inputId, iconId) {
+  const input = document.getElementById(inputId);
+  const icon = document.getElementById(iconId);
+  if(input.type === "password") {
+    input.type = "text";
+    icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7a9.97 9.97 0 012.042-3.271M6.343 6.343L17.657 17.657M9.879 9.879a3 3 0 104.242 4.242"/>`;
+  } else {
+    input.type = "password";
+    icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />`;
+  }
+}
+</script>
+{% endblock %}
