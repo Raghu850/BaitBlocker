@@ -4,30 +4,35 @@
 
 {% block content %}
 <div class="container py-5">
-  <div class="card floating-card p-5 mx-auto" style="max-width: 750px;">
-    <h1 class="mb-3 text-center fw-bold">🌐 Phishing URL Detector</h1>
+  <div class="card floating-card p-5 mx-auto shadow-lg" style="max-width: 750px;">
+    
+    <!-- Page Title -->
+    <h1 class="text-center fw-bold mb-3">🌐 Phishing URL Detector</h1>
     <p class="text-muted text-center mb-4">
-      Enter a URL to check if it is safe, suspicious, or phishing. Our AI analyzes it in seconds.
+      Enter a URL to check if it is <strong>safe</strong>, <strong>suspicious</strong>, or <strong>phishing</strong>.  
+      Our AI analyzes it in seconds.
     </p>
 
-    <form method="post" class="mb-4" id="urlForm">
-      <input type="text" name="url" placeholder="e.g. http://example.com" required 
+    <!-- URL Input Form -->
+    <form method="post" id="urlForm" class="mb-4">
+      <input type="text" name="url" placeholder="e.g. https://example.com" required
              class="form-control mb-3" value="{{ url or '' }}">
       <button type="submit" class="btn btn-theme w-100">🔍 Check URL</button>
     </form>
 
     {% if prediction %}
-      <!-- User Entered URL -->
-      <div class="user-url-section p-3 mb-4 rounded" style="background-color: #e0f7fa;">
-        <h5>🌐 URL Entered</h5>
-        <p class="mb-0">{{ prediction.url }}</p>
-      </div>
+      <!-- Entered URL Section -->
+      <section class="p-3 mb-4 rounded user-url-section">
+        <h5 class="fw-semibold mb-1">🌐 URL Entered</h5>
+        <p class="mb-0"><code>{{ prediction.url }}</code></p>
+      </section>
 
-      <!-- Prediction Result -->
-      <div class="result p-4 rounded">
-        <h4>🔍 Prediction Result</h4>
+      <!-- Prediction Result Section -->
+      <section class="p-4 rounded result">
+        <h4 class="fw-bold mb-3">🔍 Prediction Result</h4>
 
-        <p>
+        <!-- Verdict -->
+        <p class="mb-2">
           <strong>Verdict:</strong>
           {% if prediction.final_verdict|lower == 'phishing' %}
             <span class="text-danger fw-bold">❌ {{ prediction.final_verdict }}</span>
@@ -38,37 +43,46 @@
           {% endif %}
         </p>
 
+        <!-- User Message -->
         {% if prediction.user_message %}
-          <p><strong>Message:</strong> {{ prediction.user_message }}</p>
+          <p class="mb-3"><strong>Message:</strong> {{ prediction.user_message }}</p>
         {% endif %}
 
+        <!-- Reasons -->
         {% if prediction.friendly_reasons %}
-          <h5>Why this URL may be unsafe:</h5>
+          <h5 class="fw-semibold">Why this URL may be unsafe:</h5>
           <ul>
             {% for reason in prediction.friendly_reasons %}
-              <li>{{ reason }}</li>
+              <li>{{ reason|safe }}</li>
             {% endfor %}
           </ul>
         {% endif %}
 
+        <!-- Suggested Domain -->
         {% if prediction.original_legit_domain %}
-          <h5>💡 Suggested Legit Domain:</h5>
-          <p class="mb-2"><code>{{ prediction.original_legit_domain }}</code></p>
+          <h5 class="fw-semibold">💡 Suggested Correct URL:</h5>
+          <p>
+            <a href="{{ prediction.original_legit_domain }}" target="_blank" rel="noopener noreferrer">
+              <code>{{ prediction.original_legit_domain }}</code>
+            </a>
+          </p>
         {% endif %}
 
+        <!-- Advice -->
         {% if prediction.advice %}
-          <h5>🔰 Advice:</h5>
+          <h5 class="fw-semibold">🔰 Advice:</h5>
           <ul>
             {% for tip in prediction.advice %}
-              <li>{{ tip }}</li>
+              <li>{{ tip|safe }}</li>
             {% endfor %}
           </ul>
         {% endif %}
-      </div>
+      </section>
     {% endif %}
   </div>
 </div>
 
+<!-- Styles -->
 <style>
   body {
     background: linear-gradient(135deg, #f0f4ff, #d9e6ff);
@@ -79,33 +93,30 @@
   }
 
   .floating-card {
+    border-radius: 20px;
     animation: floatCard 3s ease-in-out infinite;
-    border-radius: 16px;
-    transition: background-color 0.4s ease, box-shadow 0.4s ease;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    transition: all 0.4s ease;
   }
-  [data-bs-theme="dark"] .floating-card {
-    background-color: #1e1e1e;
-    color: #fff;
-    box-shadow: 0 12px 30px rgba(255, 255, 255, 0.05);
-  }
-  [data-bs-theme="light"] .floating-card { background-color: #ffffff; color: #000; }
 
   .user-url-section {
     font-size: 1rem;
     border-left: 5px solid #00acc1;
+    background-color: #e0f7fa;
   }
 
   .result {
     background-color: #eef0ff;
     box-shadow: 0 3px 10px rgba(0,0,0,0.08);
   }
-  [data-bs-theme="dark"] .result { background-color: #2a2a3a; }
+  [data-bs-theme="dark"] .result {
+    background-color: #2a2a3a;
+  }
 
   .btn-theme {
     background-color: #007bff;
     color: #fff;
-    font-weight: bold;
+    font-weight: 600;
+    border-radius: 8px;
   }
 
   .text-danger { color: #dc3545 !important; }
@@ -120,16 +131,11 @@
   ul { padding-left: 20px; }
 </style>
 
+<!-- JS -->
 <script>
-  window.onload = function() {
-    // Reset form and hide previous results on page reload
-    if (performance.navigation.type === 1) { 
-        const urlForm = document.getElementById("urlForm");
-        if (urlForm) urlForm.reset();
-
-        const results = document.querySelectorAll(".result, .user-url-section");
-        results.forEach(result => result.style.display = "none");
-    }
+  window.onload = () => {
+    const urlForm = document.getElementById("urlForm");
+    if (performance.navigation.type === 1 && urlForm) urlForm.reset();
   };
 </script>
 {% endblock %}

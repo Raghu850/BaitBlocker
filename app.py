@@ -10,7 +10,7 @@ from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 import joblib
 import ipaddress
 import numpy as np
-from urllib.parse import urlparse
+from urllib.parse import urlparse,urlunparse
 from sqlalchemy import Column, Integer, String, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import timedelta
@@ -276,37 +276,81 @@ def local_signal_checks(url: str):
 # Gemini classifier
 # -----------------------------
 def gemini_classifier(url, signals, reasons, line_by_line):
+    """
+    Enhanced Gemini AI classifier for phishing detection with better suggested domains.
+    """
+    import json, re
+
     try:
+        # Prompt Gemini to also suggest the correct legitimate domain if it's phishing
         prompt = (
-            "You are a cybersecurity analyst. Analyze the given URL for phishing.\n"
-            "Return ONLY a JSON object with keys: verdict, confidence, reasons, user_message, line_by_line_explanation, original_legit_domain.\n"
-            f"URL: {url}\nSignals:{json.dumps(signals)}\nReasons:{json.dumps(reasons)}\nLineByLine:{json.dumps(line_by_line)}"
+            "You are a cybersecurity expert. Analyze the URL for phishing, typosquatting, HTTPS issues.\n"
+            "Return ONLY JSON with keys:\n"
+            "- verdict: 'phishing', 'suspicious', or 'safe'\n"
+            "- confidence: 0-1\n"
+            "- reasons: human-friendly explanations\n"
+            "- user_message: concise message\n"
+            "- line_by_line_explanation\n"
+            "- original_legit_domain: the legitimate domain this URL is mimicking (if any)\n\n"
+            f"URL: {url}\nSignals: {json.dumps(signals)}"
         )
+
         response = gemini_model.generate_content(prompt)
-        raw = re.sub(r"^```json|```", "", response.text.strip()).strip()
+        raw = re.sub(r"^```json|```", "", response.text.strip())
         data = json.loads(raw)
+
         verdict = data.get("verdict", "unknown").lower()
-        confidence = max(0.0, min(1.0, float(data.get("confidence", 0))))
+        confidence = float(data.get("confidence", 0))
+        confidence = max(0.0, min(1.0, confidence))
+
+        # Smart fallback: if AI returns no original domain, attempt brand mapping
+        original_domain = data.get("original_legit_domain", "")
+        if not original_domain and signals.get("brand_target"):
+            # Map brand_target intelligently (e.g., "mystore" → "microsoft.com")
+            brand_target = signals["brand_target"].lower()
+            brand_map = {
+                "mystore": "microsoft.com",
+                "insta": "instagram.com",
+                "paypal": "paypal.com",
+                "fb": "facebook.com",
+            }
+            original_domain = brand_map.get(brand_target, "")
+
+        # Ensure clickable https://
+        if original_domain and not original_domain.startswith(("http://", "https://")):
+            original_domain = "https://" + original_domain
+
         return {
             "label": verdict,
             "confidence": confidence,
-            "reasons": data.get("reasons", []),
-            "user_message": data.get("user_message", ""),
-            "line_by_line_explanation": data.get("line_by_line_explanation", {}),
-            "original_legit_domain": data.get("original_legit_domain", ""),
+            "reasons": data.get("reasons", reasons or ["Local heuristics applied."]),
+            "user_message": data.get("user_message", "⚠️ Automated analysis result from AI."),
+            "line_by_line_explanation": data.get("line_by_line_explanation", line_by_line),
+            "original_legit_domain": original_domain,
             "raw_json": data
         }
+
     except Exception:
+        # Fallback
         fallback_label = "phishing" if signals.get("brand_lookalike") or not signals.get("is_https") else "safe"
+        fallback_confidence = 0.8 if fallback_label == "phishing" else 0.7
+        fallback_reasons = []
+        if not signals.get("is_https"):
+            fallback_reasons.append("🔒 The URL uses HTTP instead of HTTPS.")
+        if signals.get("brand_lookalike"):
+            fallback_reasons.append(f"👀 The URL looks like {signals.get('brand_target')}")
         return {
             "label": fallback_label,
-            "confidence": 0.6 if fallback_label == "phishing" else 0.5,
-            "reasons": reasons or ["Local heuristics applied."],
-            "user_message": "Automated analysis fallback using local checks.",
+            "confidence": fallback_confidence,
+            "reasons": fallback_reasons,
+            "user_message": "❌ High-risk indicators detected. Likely phishing.",
             "line_by_line_explanation": line_by_line,
-            "original_legit_domain": "",
+            "original_legit_domain": KNOWN_BRANDS.get(signals.get("brand_target"), ""),
             "raw_json": {}
         }
+
+
+
 
 # -----------------------------
 # ML classifier
@@ -322,36 +366,53 @@ def ml_classifier(features_array):
 # -----------------------------
 # Predict URL
 # -----------------------------
+
 def transform_url(url):
     """Minimal placeholder feature extractor"""
     return [len(url), url.count("-"), url.count("@")]
 
-def predict_url(url):
-    signals, local_reasons, local_risk, line_by_line = local_signal_checks(url)
-    features_array = np.array(transform_url(url)).reshape(1, -1)
+def predict_url(url: str) -> dict:
+    """
+    Predicts if a URL is phishing, suspicious, or safe.
+    Combines:
+    - Local heuristic checks
+    - ML classifier
+    - Gemini AI classifier
+    Returns a structured dictionary for frontend display.
+    """
+    from urllib.parse import urlparse, urlunparse
 
-    # ML result
+    # --- Normalize URL ---
+    def normalize_url(u: str) -> str:
+        """Ensure URL has a protocol and clean trailing slashes."""
+        if not u.startswith(("http://", "https://")):
+            u = "https://" + u
+        parsed = urlparse(u)
+        return urlunparse(parsed._replace(path=parsed.path.rstrip("/")))
+
+    url_norm = normalize_url(url)
+
+    # --- Local heuristic checks ---
+    signals, local_reasons, local_risk, line_by_line = local_signal_checks(url_norm)
+
+    # --- ML prediction ---
+    features_array = np.array(transform_url(url_norm)).reshape(1, -1)
     ml_result = ml_classifier(features_array)
-
-    # Gemini result
-    gemini_result = gemini_classifier(url, signals, local_reasons, line_by_line)
-
     ml_label = ml_result.get("label", "error")
+
+    # --- Gemini AI analysis ---
+    gemini_result = gemini_classifier(url_norm, signals, local_reasons, line_by_line)
     gemini_label = gemini_result.get("label", "unknown")
-    gemini_conf = gemini_result.get("confidence", 0)
+    gemini_conf = float(gemini_result.get("confidence", 0.0))
 
-    # -----------------------------
-    # Original domain
-    # -----------------------------
-    original_domain = ""
-    if signals.get("brand_lookalike") and signals.get("brand_target"):
+    # --- Suggested Legit Domain ---
+    original_domain = gemini_result.get("original_legit_domain", "")
+    if not original_domain and signals.get("brand_target"):
         original_domain = KNOWN_BRANDS.get(signals["brand_target"], "")
-    if gemini_result.get("original_legit_domain"):
-        original_domain = gemini_result["original_legit_domain"]
+    if original_domain and not original_domain.startswith(("http://", "https://")):
+        original_domain = "https://" + original_domain
 
-    # -----------------------------
-    # Decide final verdict and user_message
-    # -----------------------------
+    # --- Final Verdict Decision ---
     if gemini_label in {"phishing", "safe"} and gemini_conf >= 0.7:
         final_verdict = gemini_label
         reasons = gemini_result.get("reasons", local_reasons)
@@ -369,30 +430,27 @@ def predict_url(url):
         reasons = local_reasons
         user_message = "✅ URL appears safe."
 
-    # -----------------------------
-    # Friendly reasons with emojis
-    # -----------------------------
+    # --- User-Friendly Reasons ---
     friendly_reasons = []
     for reason in reasons:
-        if "looks like" in reason:
+        r = reason.lower()
+        if "looks like" in r:
             parts = reason.split("looks like")
             friendly_reasons.append(
                 f"👀 The URL <code>{parts[0].strip()}</code> looks similar to <code>{parts[1].strip()}</code>. Attackers may try to trick you!"
             )
-        elif "HTTPS" in reason or "http" in reason:
+        elif "http" in r and "https" not in r:
             friendly_reasons.append("🔒 The site is not using HTTPS. Connection may not be secure.")
-        elif "@" in reason:
+        elif "@" in r:
             friendly_reasons.append("⚠️ The URL contains '@', which may hide the real destination.")
         else:
             friendly_reasons.append(f"⚠️ {reason}")
 
-    # -----------------------------
-    # Advice
-    # -----------------------------
+    # --- Advice ---
     advice = []
-    if final_verdict.lower() == "phishing":
+    if final_verdict == "phishing":
         advice.append("❌ Avoid entering any personal or sensitive information on this site.")
-    elif final_verdict.lower() == "suspicious":
+    elif final_verdict == "suspicious":
         advice.append("⚠️ URL shows suspicious signs. Double-check before proceeding.")
     else:
         advice.append("✅ URL appears safe, but always verify before logging in.")
@@ -400,15 +458,19 @@ def predict_url(url):
     if original_domain:
         advice.append(f"💡 Suggested Legit Domain: {original_domain}")
 
+    # --- Final Structured Response ---
     return {
-        "url": url,
+        "url": url_norm,
         "final_verdict": final_verdict.capitalize(),
         "friendly_reasons": friendly_reasons,
         "user_message": user_message,
         "advice": advice,
-        "original_legit_domain": original_domain
+        "original_legit_domain": original_domain,
+        "gemini_verdict": gemini_label.capitalize(),
+        "confidence": gemini_conf,
+        "reasons": reasons,
+        "line_by_line": line_by_line,
     }
-
 # -----------------------------
 # Helpers for Mail Phishing
 # -----------------------------
@@ -636,14 +698,61 @@ def dashboard():
         "suspicious": sum(1 for h in history if h.result.lower() == "suspicious"),
     }
 
+    # --- Custom phishing verdict output for dashboard ---
+    # If a URL is submitted, show detailed phishing analysis
+    url_input = request.args.get("url")
+    phishing_output = None
+    if url_input:
+        result = predict_url(url_input)
+        url_display = result.get("url", url_input)
+        verdict = result.get("final_verdict", "Unknown")
+        user_message = result.get("user_message", "")
+        reasons = result.get("friendly_reasons", result.get("reasons", []))
+        advice = result.get("advice", [])
+        original_legit_domain = result.get("original_legit_domain", "")
+        # Compose output similar to your example
+        phishing_output = f"""
+The URL <b>{url_display}</b> is highly suspicious and likely a phishing attempt. Phishing websites often mimic legitimate domains to deceive users into entering sensitive information.<br><br>
+<b>Verdict:</b> {"❌ Phishing" if verdict.lower() == "phishing" else "✅ Safe" if verdict.lower() == "safe" else "⚠️ Suspicious"}<br>
+<b>Message:</b> {user_message}<br><br>
+<b>Why this URL may be unsafe:</b>
+<ul>
+""" + "".join(f"<li>{r}</li>" for r in reasons) + "</ul>"
+
+        if original_legit_domain:
+            phishing_output += f"""
+<b>Suggested Correct URL:</b> If you intended to visit this site, the correct URL is:<br>
+Correct URL: <b>https://{original_legit_domain}/login</b><br>
+"""
+
+        phishing_output += "<br><b>Advice:</b><ul>"
+        for a in advice:
+            phishing_output += f"<li>{a}</li>"
+        phishing_output += "</ul>"
+
+        phishing_output += """
+<br><b>What to Do If You Clicked on a Phishing Link:</b>
+<ul>
+<li>Disconnect from the Internet: Immediately disconnect your device to prevent further data transmission.</li>
+<li>Run a Security Scan: Use reputable antivirus software to scan your device for malware.</li>
+<li>Change Passwords: If you entered any credentials, change your passwords on the affected accounts.</li>
+<li>Monitor Accounts: Keep an eye on your financial and personal accounts for any unauthorized activity.</li>
+<li>Report the Incident: Report the phishing attempt to organizations like the Better Business Bureau or the Federal Trade Commission.</li>
+</ul>
+<b>Additional Resources:</b>
+<ul>
+<li><a href="https://us.norton.com/blog/emerging-threats/what-to-do-if-you-click-on-a-phishing-link" target="_blank">Norton’s Guide on Phishing Links</a></li>
+<li><a href="https://www.keepersecurity.com/blog/2022/10/13/what-to-do-if-you-click-on-a-phishing-link/" target="_blank">Keeper Security’s Advice</a></li>
+</ul>
+"""
+
     return render_template(
         "dashboard.html",
         user=user,
         stats=stats,
-        user_history=history
+        user_history=history,
+        phishing_output=phishing_output
     )
-
-
 
 @app.route("/logout")
 @nocache
@@ -1075,11 +1184,12 @@ def url_phishing_detector():
     entered_url = None
 
     if request.method == "POST":
-        if "url" in request.form and request.form["url"].strip():
-            entered_url = request.form["url"].strip()
+        entered_url = request.form.get("url", "").strip()
+        if entered_url:
             try:
                 prediction_result = predict_url(entered_url)
 
+                # Save to DB if user is logged in
                 if "user" in session and prediction_result and "final_verdict" in prediction_result:
                     user_obj = None
                     if session["user"].get("email"):
@@ -1100,50 +1210,8 @@ def url_phishing_detector():
 
             except Exception as e:
                 prediction_result = {"error": f"❗ Error analyzing URL: {str(e)}"}
-
-        elif "file" in request.files:
-            file = request.files["file"]
-            if file.filename == "":
-                prediction_result = {"error": "❗ No file selected."}
-            else:
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-                file.save(filepath)
-
-                detected_results = []
-                try:
-                    with open(filepath, "r", encoding="utf-8") as f:
-                        for line in f:
-                            url = line.strip()
-                            if url:
-                                analysis = predict_url(url)
-                                detected_results.append({"url": url, **analysis})
-
-                                if "user" in session and analysis and "final_verdict" in analysis:
-                                    user_obj = None
-                                    if session["user"].get("email"):
-                                        user_obj = User.query.filter_by(email=session["user"]["email"]).first()
-                                    elif session["user"].get("phone"):
-                                        user_obj = User.query.filter_by(phone=session["user"]["phone"]).first()
-
-                                    if user_obj:
-                                        new_detection = Detection(
-                                            user_id=user_obj.id,
-                                            type="url",
-                                            input_data=url,
-                                            result=analysis["final_verdict"],
-                                            confidence=float(analysis.get("confidence", 0.0))
-                                        )
-                                        db.session.add(new_detection)
-
-                        db.session.commit()
-
-                    prediction_result = {"file_results": detected_results, "filename": filename}
-
-                except Exception as e:
-                    prediction_result = {"error": f"❗ Error processing file: {str(e)}"}
         else:
-            prediction_result = {"error": "❗ No URL or file provided."}
+            prediction_result = {"error": "❗ Please enter a URL to analyze."}
 
     return render_template("url_phishing_detector.html", prediction=prediction_result, url=entered_url)
 
@@ -1312,5 +1380,4 @@ def change_password():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(debug=True)
